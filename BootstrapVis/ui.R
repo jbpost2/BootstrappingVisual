@@ -20,7 +20,7 @@ shinyUI(fluidPage(
                  fluidRow(
                      column(3,
                             hr(),
-                            selectInput("PopDist1", "Select the population distribution", choices = c("Normal", "Gamma", "Binomial")),
+                            selectInput("PopDist1", "Select the population distribution", choices = c("Normal", "Gamma", "Weibull")),
                             uiOutput("Param11"),
                             uiOutput("Param12"),
                             uiOutput("Est1"),

@@ -8,8 +8,8 @@ shinyServer(function(input, output, session) {
             numericInput("Parameter11", "Mean", value = 0)
         } else if(input$PopDist1 == "Gamma"){
             numericInput("Parameter11", "Shape", value = 1, min = 0.01)
-        } else if(input$PopDist1 == "Binomial"){
-            numericInput("Parameter11", "Probability", value = 0.5, min = 0, max = 1)
+        } else if(input$PopDist1 == "Weibull"){
+            numericInput("Parameter11", "Shape", value =1, min = 0.01)
         }
     })
     
@@ -18,8 +18,8 @@ shinyServer(function(input, output, session) {
             numericInput("Parameter12", "Variance", min = 0.01, value = 1)
         } else if(input$PopDist1 == "Gamma"){
             numericInput("Parameter12", "Rate", value = 1, min = 0.01)
-        } else if(input$PopDist1 == "Binomial"){
-            NULL
+        } else if(input$PopDist1 == "Weibull"){
+            numericInput("Parameter12", "Scale", min = 0.01, value = 1)
         }
     })    
     
@@ -28,8 +28,8 @@ shinyServer(function(input, output, session) {
             selectInput("Estimator1", "Parameter to estimate (with MLE)", c("Mean", "Variance"), selected = "Mean")        
         } else if(input$PopDist1 == "Gamma"){
             selectInput("Estimator1", "Parameter to estimate (with MLE)", c("Shape", "Rate"), selected = "Shape")  
-        } else if(input$PopDist1 == "Binomial"){
-            selectInput("Estimator1", "Parameter to estimate (with MLE)", c("Probability"), selected = "Probability")  
+        } else if(input$PopDist1 == "Weibull"){
+            selectInput("Estimator1", "Parameter to estimate (with MLE)", c("Shape", "Scale"), selected = "Shape")  
         }
     })   
     
@@ -120,28 +120,39 @@ shinyServer(function(input, output, session) {
             shape = input$Parameter11
             rate = input$Parameter12
             curve(dgamma(x, shape = shape, rate = rate), from = 0, to = shape/rate + 4*shape/rate^2, n = 1000, lwd = 2, main = paste0("gamma(", shape, ", ", rate, ") Distribution"), xlab = "y", ylab = "f(y)")
-        } else if(input$PopDist1 == "Binomial"){
-            p = input$Parameter11
-            curve(dbinom(x, size = input$SampSize1, prob = p), from = 0, to = input$SampSize1, n = input$SampSize1 + 1, type = "h", lwd = 2, main = paste0("Bin(", input$SampSize1, ", ", p, ") Distribution"), xlab = "y", ylab = "p(y)")
+        } else if(input$PopDist1 == "Weibull"){
+            shape = input$Parameter11
+            scale = input$Parameter12
+            curve(dweibull(x, shape = shape, scale = scale), from = 0, to = scale*gamma(1+1/shape)+4*sqrt(scale^2*(gamma(1+2/shape)-(gamma(1+1/shape))^2)), n = 1000, lwd = 2, main = paste0("Weibull(", shape, ", ", scale, ") Distribution"), xlab = "y", ylab = "f(y)")
         }
     })
     
     popSample <- reactiveValues(samples = data.frame(), MLEs = c())
     
     observeEvent(input$GenSample1, {
-        popSample$samples <- data.frame(replicate(1000, rnorm(input$SampSize1, mean = input$Parameter11, sd = sqrt(input$Parameter12))))
-        temp <- apply(popSample$samples, MARGIN = 2, FUN = fitdistr, densfun = "normal")
-        popSample$MLEs <- sapply(temp, FUN = function(x){x$estimate})
+        if(input$PopDist1 == "Normal"){
+            popSample$samples <- data.frame(replicate(1000, rnorm(input$SampSize1, mean = input$Parameter11, sd = sqrt(input$Parameter12))))
+            temp <- apply(popSample$samples, MARGIN = 2, FUN = fitdistr, densfun = "normal")
+            popSample$MLEs <- sapply(temp, FUN = function(x){x$estimate})       
+        } else if(input$PopDist1 == "Gamma"){
+            popSample$samples <- data.frame(replicate(1000, rgamma(input$SampSize1, shape = input$Parameter11, rate = input$Parameter12)))
+            temp <- apply(popSample$samples, MARGIN = 2, FUN = fitdistr, densfun = "gamma")
+            popSample$MLEs <- sapply(temp, FUN = function(x){x$estimate})
+        } else if(input$PopDist1 == "Weibull"){
+            popSample$samples <- data.frame(replicate(1000, rweibull(input$SampSize1, shape = input$Parameter11, scale = input$Parameter12)))
+            temp <- apply(popSample$samples, MARGIN = 2, FUN = fitdistr, densfun = "weibull")
+            popSample$MLEs <- sapply(temp, FUN = function(x){x$estimate})
+        }
     })
     
     output$Samp11 <- renderPlot({
-        hist(popSample$samples[,1], main = "Histogram of 1st Sampled Dataset")
+        hist(popSample$samples[,1], main = "Histogram of 1st Sampled Dataset", xlab = "data values")
     })
     output$Samp12 <- renderPlot({
-        hist(popSample$samples[,2], main = "Histogram of 2nd Sampled Dataset")
+        hist(popSample$samples[,2], main = "Histogram of 2nd Sampled Dataset", xlab = "data values")
     })
     output$Samp13 <- renderPlot({
-        hist(popSample$samples[,1000], main = "Histogram of 1000th Sampled Dataset")
+        hist(popSample$samples[,1000], main = "Histogram of 1000th Sampled Dataset", xlab = "data values")
     })
     
     output$SamplingDist1 <- renderPlot({
