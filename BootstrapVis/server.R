@@ -352,7 +352,8 @@ shinyServer(function(input, output, session) {
                                plotOutput("SamplingDist2")
                         ),
                         column(2,
-                               tableOutput("Summary2")
+                               tableOutput("Summary2"), 
+                               tableOutput("SummaryCI2")
                         )
                     )
                 )
@@ -476,11 +477,32 @@ shinyServer(function(input, output, session) {
             mean <- round(mean(bootSamples$MLEs[1,]), 3)
             se <- round(sd(bootSamples$MLEs[1,]), 3)
             truth <- input$Parameter21
+            ASE <- singleSample$MLEs$sd[1]
         } else {
             mean <- round(mean(bootSamples$MLEs[2,]), 3)
             se <- round(sd(bootSamples$MLEs[2,]), 3)
             truth <- input$Parameter22
+            ASE <- singleSample$MLEs$sd[2]
         }
-        data.frame(Summaries = c(truth, mean, se), row.names = c("True Parameter Value", "Mean of Distribution", "SE of Distribution"))
+        data.frame(Summaries = c(truth, mean, se, ASE), row.names = c("True Parameter Value", "Mean of Bootstrap Distribution", "SE of Bootstrap Distribution", "ASE of MLE"))
+    })
+        
+    output$SummaryCI2 <- renderTable(rownames = TRUE, {
+        if(input$Estimator2 == "Mean" | input$Estimator2 == "Shape"){
+            percentile <- quantile(bootSamples$MLEs[1,], c(0.025, 0.975))
+            mle <- singleSample$MLEs$estimate[1]
+            mleSE <- singleSample$MLEs$sd[1]
+            reflected <- c(mle-(quantile(bootSamples$MLEs[1,],0.975)-mle), mle-(quantile(bootSamples$MLEs[1,],0.025)-mle))
+            mleInterval <- c(mle-1.96*mleSE, mle+1.96*mleSE)
+        } else {
+            percentile <- quantile(bootSamples$MLEs[2,], c(0.025, 0.975))
+            mle <- singleSample$MLEs$estimate[2]
+            mleSE <- singleSample$MLEs$sd[2]
+            reflected <- c(mle-(quantile(bootSamples$MLEs[2,],0.975)-mle), mle-(quantile(bootSamples$MLEs[2,],0.025)-mle))
+            mleInterval <- c(mle-1.96*mleSE, mle+1.96*mleSE)
+        }
+        temp <- t(data.frame(percentile = percentile, reflected = reflected, mleInterval = mleInterval, row.names = c("Lower", "Upper")))
+        row.names(temp) <- c("95% percentile interval", "95% refelected percentile interval", "95% large-sample interval using MLE")
+        temp
     })
 })
