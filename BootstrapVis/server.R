@@ -3,6 +3,7 @@ library(MASS)
 
 shinyServer(function(input, output, session) {
 
+    #Top left input section
     output$Param11 <- renderUI({
         if(input$PopDist1 == "Normal"){
             numericInput("Parameter11", "Mean", value = 0)
@@ -32,8 +33,9 @@ shinyServer(function(input, output, session) {
             selectInput("Estimator1", "Parameter to estimate (with MLE)", c("Shape", "Scale"), selected = "Shape")  
         }
     })   
+
     
-    #action button functionality for first part
+    #action button functionality 
     v <- reactiveValues(createSamples = 1, createSamplingDist = 1) #
     
     observeEvent(input$GenSample1, {
@@ -50,6 +52,8 @@ shinyServer(function(input, output, session) {
         v$createSamplingDist = 1
     })
     
+
+    #Create the UI bits when they press buttons
     output$secondSection1 <- renderUI({
         if(v$createSamples >1){
             withTags({
@@ -71,7 +75,8 @@ shinyServer(function(input, output, session) {
                     column(3, plotOutput("Samp12")),
                     column(1,  br(), br(), br(), br(), br(), br(), align="center", h1("...")),
                     column(3, plotOutput("Samp13"))
-                )
+                ), 
+                fluidRow(br())
                 )
             })
         } else {
@@ -91,6 +96,7 @@ shinyServer(function(input, output, session) {
                     fluidRow(
                         column(2, 
                                br(), br(), hr(),
+                               h4("The blue line represents the true value we are estimating."), br(),
                                h4("Click here to reset the app:"),
                                actionButton("Reset1", "Reset"),
                                hr()
@@ -109,8 +115,8 @@ shinyServer(function(input, output, session) {
         }
     })    
     
-
     
+    #Create the top population curve
     output$PopCurve1 <- renderPlot({
         if(input$PopDist1 == "Normal"){
             mean = input$Parameter11
@@ -127,8 +133,9 @@ shinyServer(function(input, output, session) {
         }
     })
     
-    popSample <- reactiveValues(samples = data.frame(), MLEs = c())
     
+    #data creation
+    popSample <- reactiveValues(samples = data.frame(), MLEs = c())
     observeEvent(input$GenSample1, {
         if(input$PopDist1 == "Normal"){
             popSample$samples <- data.frame(replicate(1000, rnorm(input$SampSize1, mean = input$Parameter11, sd = sqrt(input$Parameter12))))
@@ -144,25 +151,58 @@ shinyServer(function(input, output, session) {
             popSample$MLEs <- sapply(temp, FUN = function(x){x$estimate})
         }
     })
+
     
+    #Plots of samples with MLE info    
     output$Samp11 <- renderPlot({
-        hist(popSample$samples[,1], main = "Histogram of 1st Sampled Dataset", xlab = "data values")
+        h <- hist(popSample$samples[,1], main = "Histogram of 1st Sampled Dataset", xlab = "data values")
+        if(input$Estimator1 == "Mean" | input$Estimator1 == "Shape"){
+            text(x = mean(quantile(popSample$samples[,1], probs = c(0.8, 0.9))), y = max(h$counts)-1, labels = paste0("MLE = ", round(popSample$MLEs[1,1], 2)), cex = 1.2)
+        } else {
+            text(x = mean(quantile(popSample$samples[,1], probs = c(0.8, 0.9))), y = max(h$counts)-1, labels = paste0("MLE = ", round(popSample$MLEs[2,1], 2)), cex = 1.2)
+        }
     })
+
     output$Samp12 <- renderPlot({
-        hist(popSample$samples[,2], main = "Histogram of 2nd Sampled Dataset", xlab = "data values")
+        h <- hist(popSample$samples[,2], main = "Histogram of 2nd Sampled Dataset", xlab = "data values")
+        if(input$Estimator1 == "Mean" | input$Estimator1 == "Shape"){
+            text(x = mean(quantile(popSample$samples[,2], probs = c(0.8, 0.9))), y = max(h$counts)-1, labels = paste0("MLE = ", round(popSample$MLEs[1,2], 2)), cex = 1.2)
+        } else {
+            text(x = mean(quantile(popSample$samples[,2], probs = c(0.8, 0.9))), y = max(h$counts)-1, labels = paste0("MLE = ", round(popSample$MLEs[2,2], 2)), cex = 1.2)
+        }
     })
+    
     output$Samp13 <- renderPlot({
-        hist(popSample$samples[,1000], main = "Histogram of 1000th Sampled Dataset", xlab = "data values")
+        h <- hist(popSample$samples[,1000], main = "Histogram of 1000th Sampled Dataset", xlab = "data values")
+        if(input$Estimator1 == "Mean" | input$Estimator1 == "Shape"){
+            text(x = mean(quantile(popSample$samples[,1000], probs = c(0.8, 0.9))), y = max(h$counts)-1, labels = paste0("MLE = ", round(popSample$MLEs[1,1000], 2)), cex = 1.2)
+        } else {
+            text(x = mean(quantile(popSample$samples[,1000], probs = c(0.8, 0.9))), y = max(h$counts)-1, labels = paste0("MLE = ", round(popSample$MLEs[2,1000], 2)), cex = 1.2)
+        }
     })
     
+    
+    #Sampling distribution + Summary
     output$SamplingDist1 <- renderPlot({
-        hist(popSample$MLEs[1,], main = "Sampling Distribution based on 1000 observations", xlab = "parameter")
+        if(input$Estimator1 == "Mean" | input$Estimator1 == "Shape"){
+            hist(popSample$MLEs[1,], main = "Sampling Distribution based on 1000 observations", xlab = "parameter")
+            abline(v = input$Parameter11, col = "Blue", lwd = 2)
+        } else {
+            hist(popSample$MLEs[2,], main = "Sampling Distribution based on 1000 observations", xlab = "parameter")
+            abline(v = input$Parameter12, col = "Blue", lwd = 2)
+        }
     })
     
-    output$Summary1 <- renderTable(rownames = TRUE,
-                                   {
-        mean <- round(mean(popSample$MLEs[1,]), 2)
-        se <- round(sd(popSample$MLEs[1,]), 2)        
-        data.frame(stats = c(mean, se), row.names = c("Mean of Distribution", "SE of Distribution"))
+    output$Summary1 <- renderTable(rownames = TRUE, {
+        if(input$Estimator1 == "Mean" | input$Estimator1 == "Shape"){
+            mean <- round(mean(popSample$MLEs[1,]), 3)
+            se <- round(sd(popSample$MLEs[1,]), 3)       
+            truth <- input$Parameter11
+        } else {
+            mean <- round(mean(popSample$MLEs[2,]), 3)
+            se <- round(sd(popSample$MLEs[2,]), 3)
+            truth <- input$Parameter12
+        }
+        data.frame(Summaries = c(truth, mean, se), row.names = c("True Parameter Value", "Mean of Distribution", "SE of Distribution"))
     })
 })
