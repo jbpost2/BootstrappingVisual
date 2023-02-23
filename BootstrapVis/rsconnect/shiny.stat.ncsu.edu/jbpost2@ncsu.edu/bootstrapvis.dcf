@@ -1,0 +1,13 @@
+name: bootstrapvis
+title: BootstrapVis
+username: jbpost2@ncsu.edu
+account: jbpost2@ncsu.edu
+server: shiny.stat.ncsu.edu
+hostUrl: https://shiny.stat.ncsu.edu/__api__
+appId: 34
+bundleId: 56
+url: https://shiny.stat.ncsu.edu/content/fa77f2fe-d961-4da1-b445-60250cd0bd9c/
+when: 1674071532.93886
+lastSyncTime: 1674071532.93887
+asMultiple: FALSE
+asStatic: FALSE
